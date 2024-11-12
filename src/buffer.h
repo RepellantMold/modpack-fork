@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __MODPACK_BUFFER_H__
+#define __MODPACK_BUFFER_H__
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -22,3 +23,5 @@ void* buffer_add(buffer_t* buffer, const void* data, size_t size);
 void* buffer_get(const buffer_t* buffer, size_t index);
 size_t buffer_offset(const buffer_t* buffer, const void* member);
 size_t buffer_count(const buffer_t* buffer);
+
+#endif

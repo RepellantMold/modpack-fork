@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __MODPACK_PROTRACKER_H__
+#define __MODPACK_PROTRACKER_H__
 
 #include "buffer.h"
 
@@ -210,3 +211,5 @@ void protracker_scan_notes(const protracker_t* module, void (*scan)(const protra
  *
 **/
 void protracker_channel_to_text(const protracker_channel_t* channel, char *out, size_t buflen);
+
+#endif

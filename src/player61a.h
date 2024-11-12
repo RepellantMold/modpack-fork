@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __MODPACK_PLAYER61A_H__
+#define __MODPACK_PLAYER61A_H__
 
 #include "protracker.h"
 
@@ -78,3 +79,4 @@ typedef struct
 bool player61a_convert(buffer_t* buffer, const protracker_t* module, const char* opts);
 protracker_t* player61a_load(const buffer_t* buffer);
 
+#endif

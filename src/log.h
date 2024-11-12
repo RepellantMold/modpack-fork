@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __MODPACK_LOG_H__
+#define __MODPACK_LOG_H__
 
 #define LOG_LEVEL_NONE (-3)
 #define LOG_LEVEL_ERROR (-2)
@@ -15,3 +16,5 @@ void log_msg(int level, const char* format, ...);
 #define LOG_INFO(...) log_msg(LOG_LEVEL_INFO, __VA_ARGS__)
 #define LOG_DEBUG(...) log_msg(LOG_LEVEL_DEBUG, __VA_ARGS__)
 #define LOG_TRACE(...) log_msg(LOG_LEVEL_TRACE, __VA_ARGS__)
+
+#endif
