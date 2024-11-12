@@ -11,6 +11,8 @@
 #define PT_NUM_POSITIONS (128)
 #define PT_NUM_CHANNELS (4)
 #define PT_PATTERN_ROWS (64)
+#define PT_PATTERN_SIZE (PT_NUM_CHANNELS * 4 * PT_PATTERN_ROWS)
+#define PT_SAMPLE_HEADER_SIZE 30
 
 #define PT_CMD_ARPEGGIO         (0)
 #define PT_CMD_SLIDE_UP         (1)

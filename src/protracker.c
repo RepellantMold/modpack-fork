@@ -23,9 +23,9 @@ static char* notes[] = {
 
 void protracker_channel_to_text(const protracker_channel_t* channel, char* out, size_t buflen)
 {
-    uint8_t sample = protracker_get_sample(channel);
-    uint16_t period = protracker_get_period(channel);
-    protracker_effect_t effect = protracker_get_effect(channel);
+    const uint8_t sample = protracker_get_sample(channel);
+    const uint16_t period = protracker_get_period(channel);
+    const protracker_effect_t effect = protracker_get_effect(channel);
 
     if (sample > 0 && period > 0)
     {
@@ -35,7 +35,7 @@ void protracker_channel_to_text(const protracker_channel_t* channel, char* out, 
             {
                 if (octaves[i][j] == period)
                 {
-                    snprintf(out, buflen, "%s%ld%02X%1X%1X%1X", notes[j], i, sample, effect.cmd, effect.data.ext.cmd, effect.data.ext.value);
+                    snprintf(out, buflen, "%.2s%ld%02X%1X%1X%1X", notes[j], i, sample, effect.cmd, effect.data.ext.cmd, effect.data.ext.value);
                     return;
                 }
             }
@@ -51,21 +51,22 @@ void protracker_channel_to_text(const protracker_channel_t* channel, char* out, 
 
 static void process_sample_header(protracker_sample_t* sample, const uint8_t* in, size_t index)
 {
-    memcpy(sample, in, sizeof(protracker_sample_t));
+    unsigned char struct_buffer[30] = {0};
+    memcpy(struct_buffer, in, PT_SAMPLE_HEADER_SIZE);
 
-    sample->length = end_be16toh(sample->length);
-    sample->repeat_offset = end_be16toh(sample->repeat_offset);
-    sample->repeat_length = end_be16toh(sample->repeat_length);
+    strncpy(sample->name, struct_buffer, 22);
+    sample->length = struct_buffer[23] + (struct_buffer[22] << 8);
+    sample->finetone = struct_buffer[24];
+    sample->volume = struct_buffer[25];
+    sample->repeat_offset = struct_buffer[27] + (struct_buffer[26] << 8);
+    sample->repeat_length = struct_buffer[29] + (struct_buffer[28] << 8);
 
-    char sample_name[sizeof(sample->name)+1];
-    memset(sample_name, 0, sizeof(sample_name));
-    memcpy(sample_name, sample->name, sizeof(sample->name));
-    LOG_TRACE(" #%02u - length: $%04X, repeat offset: $%04X, repeat length: $%04X, name: '%s'\n",
-        index+1,
+    LOG_TRACE(" #%02u - length: $%04X, repeat offset: $%04X, repeat length: $%04X, name: '%.22s'\n",
+        (unsigned int)index+1,
         sample->length,
         sample->repeat_offset,
         sample->repeat_length,
-        sample_name
+        sample->name
     );
 }
 
@@ -158,7 +159,7 @@ protracker_t* protracker_load(const buffer_t* buffer)
             }
 
             process_sample_header(&(module.sample_headers[i]), curr, i);
-            curr += sizeof(protracker_sample_t);
+            curr += PT_SAMPLE_HEADER_SIZE;
         }
 
         if (curr > max)
@@ -199,7 +200,7 @@ protracker_t* protracker_load(const buffer_t* buffer)
         // Patterns
 
         module.num_patterns = max_pattern + 1;
-        module.patterns = malloc(module.num_patterns * sizeof(protracker_pattern_t));
+        module.patterns = malloc(module.num_patterns * PT_PATTERN_SIZE);
 
         for (size_t i = 0; i < module.num_patterns; ++i)
         {
@@ -209,7 +210,7 @@ protracker_t* protracker_load(const buffer_t* buffer)
                 break;
             }
 
-            memcpy(&module.patterns[i], curr, sizeof(protracker_pattern_t));
+            memcpy(&module.patterns[i], curr, PT_PATTERN_SIZE);
 
             LOG_TRACE("Pattern #%lu:\n", i);
             for(size_t j = 0; j < PT_PATTERN_ROWS; ++j)
@@ -222,7 +223,7 @@ protracker_t* protracker_load(const buffer_t* buffer)
                 {
                     const protracker_channel_t* channel = &(pos->channels[k]);
 
-                    char channel_string[32];
+                    char channel_string[32] = {0};
 
                     protracker_channel_to_text(channel, channel_string, sizeof(channel_string));
 
@@ -232,7 +233,7 @@ protracker_t* protracker_load(const buffer_t* buffer)
                 LOG_TRACE("\n");
             }
 
-            curr += sizeof(protracker_pattern_t);
+            curr += PT_PATTERN_SIZE;
         }
 
         LOG_TRACE("Sample Data:\n");
@@ -292,7 +293,7 @@ bool protracker_convert(buffer_t* buffer, const protracker_t* module, const char
         sample.repeat_offset = end_htobe16(sample.repeat_offset);
         sample.repeat_length = end_htobe16(sample.repeat_length);
 
-        buffer_add(buffer, &sample, sizeof(protracker_sample_t));
+        buffer_add(buffer, &sample, PT_SAMPLE_HEADER_SIZE);
     }
 
     LOG_TRACE(" - Song\n");
@@ -305,7 +306,7 @@ bool protracker_convert(buffer_t* buffer, const protracker_t* module, const char
     for (size_t i = 0; i < module->num_patterns; ++i)
     {
         const protracker_pattern_t* pattern = &(module->patterns[i]);
-        buffer_add(buffer, pattern, sizeof(protracker_pattern_t));
+        buffer_add(buffer, pattern, PT_PATTERN_SIZE);
     }
 
     LOG_TRACE(" - Sample Data\n");
@@ -724,7 +725,7 @@ void protracker_compact_sample_indexes(protracker_t* module)
             continue;
         }
 
-        memcpy(&(module->sample_headers[sample_index]), &(module->sample_headers[i]), sizeof(protracker_sample_t));
+        memcpy(&(module->sample_headers[sample_index]), &(module->sample_headers[i]), PT_SAMPLE_HEADER_SIZE);
         module->sample_data[sample_index] = module->sample_data[i];
 
         compact_sample_data compact_data = { (uint8_t)(i+1), i - sample_index };
@@ -733,7 +734,7 @@ void protracker_compact_sample_indexes(protracker_t* module)
 
     for (size_t i = sample_count; i < PT_NUM_SAMPLES; ++i)
     {
-        memset(&(module->sample_headers[i]), 0, sizeof(protracker_sample_t));
+        memset(&(module->sample_headers[i]), 0, PT_SAMPLE_HEADER_SIZE);
         module->sample_data[i] = 0;
     }
 }
