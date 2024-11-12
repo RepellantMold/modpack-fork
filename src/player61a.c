@@ -1,5 +1,6 @@
 #include "player61a.h"
 #include "options.h"
+#include "endianness.h"
 #include "log.h"
 
 /*
@@ -490,7 +491,7 @@ static void write_song(buffer_t* buffer, const player61a_t* module, const char* 
     {
         p61a_header_t header;
 
-        header.sample_offset = htons(get_sample_offset(module));
+        header.sample_offset = end_htobe16(get_sample_offset(module));
         header.pattern_count = module->header.pattern_count;
         header.sample_count = module->header.sample_count;
 
@@ -508,17 +509,17 @@ static void write_song(buffer_t* buffer, const player61a_t* module, const char* 
 
         if (!empty)
         {
-            sample.length = htons(in->length);
+            sample.length = end_htobe16(in->length);
             sample.finetone = in->finetone;
             sample.volume = in->volume;
-            sample.repeat_offset = htons(in->repeat_offset);
+            sample.repeat_offset = end_htobe16(in->repeat_offset);
         }
         else
         {
-            sample.length = htons(1);
+            sample.length = end_htobe16(1);
             sample.finetone = 0;
             sample.volume = 0;
-            sample.repeat_offset = htons(0xffff);
+            sample.repeat_offset = end_htobe16(0xffff);
         }
 
         buffer_add(buffer, &sample, sizeof(sample));
@@ -531,7 +532,7 @@ static void write_song(buffer_t* buffer, const player61a_t* module, const char* 
         p61a_pattern_offset_t offset;
         for (size_t j = 0; j < PT_NUM_CHANNELS; ++j)
         {
-            offset.channels[j] = htons(module->pattern_offsets[i].channels[j]);
+            offset.channels[j] = end_htobe16(module->pattern_offsets[i].channels[j]);
         }
 
         buffer_add(buffer, &offset, sizeof(offset));
@@ -617,10 +618,10 @@ static const uint8_t* read_sample_headers(p61a_sample_t* sample_headers, size_t 
         memcpy(&sample, curr, sizeof(sample));
         curr += sizeof(sample);
 
-        sample.length = ntohs(sample.length);
+        sample.length = end_be16toh(sample.length);
         sample.finetone = sample.finetone;
         sample.volume = sample.volume;
-        sample.repeat_offset = ntohs(sample.repeat_offset);
+        sample.repeat_offset = end_be16toh(sample.repeat_offset);
 
         LOG_TRACE(" #%02u - length: $%04X, finetone: %u, volume: %u, repeat offset: $%04X\n",
             (i+1),
@@ -654,7 +655,7 @@ static const uint8_t* read_pattern_offsets(p61a_pattern_offset_t* pattern_offset
         LOG_TRACE(" #%lu:", i);
         for (size_t j = 0; j < PT_NUM_CHANNELS; ++j)
         {
-            offset.channels[j] = ntohs(offset.channels[j]);
+            offset.channels[j] = end_be16toh(offset.channels[j]);
             LOG_TRACE(" %04X", offset.channels[j]);
         }
         LOG_TRACE("\n");
@@ -862,7 +863,7 @@ protracker_t* player61a_load(const buffer_t* buffer)
         memcpy(&header, curr, sizeof(header));
         curr += sizeof(p61a_header_t);
 
-        header.sample_offset = ntohs(header.sample_offset);
+        header.sample_offset = end_be16toh(header.sample_offset);
         LOG_TRACE("Header:\n Sample Offset: %u\n Patterns:%u\n Sample count:%u\n", header.sample_offset, header.pattern_count, header.sample_count);
 
         if (!header.pattern_count)

@@ -1,5 +1,8 @@
-modpack
+modpack*
 out
 reference
 *.swp
 .idea
+
+*.[mM][oO][dD]
+*.[nN][sS][tT]
