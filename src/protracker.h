@@ -13,6 +13,10 @@
 #define PT_PATTERN_ROWS (64)
 #define PT_PATTERN_SIZE (PT_NUM_CHANNELS * 4 * PT_PATTERN_ROWS)
 #define PT_SAMPLE_HEADER_SIZE 30
+#define PT_MAX_SONG_NAME_LENGTH 20
+#define PT_MAX_SAMPLE_NAME_LENGTH 22
+#define PT_MAGIC_STRING_LENGTH 4
+#define PT_SONG_LENGTH (1+1+128)
 
 #define PT_CMD_ARPEGGIO         (0)
 #define PT_CMD_SLIDE_UP         (1)
@@ -50,12 +54,12 @@
 
 typedef struct __attribute__((__packed__))
 {
-    char name[20];
+    char name[PT_MAX_SONG_NAME_LENGTH];
 } protracker_header_t;
 
 typedef struct __attribute__((__packed__))
 {
-    char name[22];
+    char name[PT_MAX_SAMPLE_NAME_LENGTH];
     uint16_t length;        // sample length in words (1 word == 2 bytes)
     uint8_t finetone;       // low nibble
     uint8_t volume;         // sample volume (0..64)
@@ -163,7 +167,7 @@ void protracker_remove_unused_samples(protracker_t* module);
 
 /**
  *
- * Remove samples that identical
+ * Remove samples that are identical
  *
 **/
 void protracker_remove_identical_samples(protracker_t* module);
@@ -191,21 +195,21 @@ void protracker_clean_effects(protracker_t* module, const char* options);
 
 /**
  *
- * Pattern iterator to simplify transforming protracker pattern data
+ * Pattern iterator to simplify transforming ProTracker pattern data
  *
 **/
 void protracker_transform_notes(protracker_t* module, void (*transform)(protracker_channel_t* channel, uint8_t index, void* data), void* data);
 
 /**
  *
- * Pattern iterator to simplify scanning protracker pattern data
+ * Pattern iterator to simplify scanning ProTracker pattern data
  *
 **/
 void protracker_scan_notes(const protracker_t* module, void (*scan)(const protracker_channel_t* channel, uint8_t index, void* data), void* data);
 
 /**
  *
- * Build a text string out of a protracker channel
+ * Build a text string out of a ProTracker channel
  *
  * channel - Channel to print
  * out - Output buffer

@@ -51,10 +51,10 @@ void protracker_channel_to_text(const protracker_channel_t* channel, char* out, 
 
 static void process_sample_header(protracker_sample_t* sample, const uint8_t* in, size_t index)
 {
-    unsigned char struct_buffer[30] = {0};
+    unsigned char struct_buffer[PT_SAMPLE_HEADER_SIZE] = {0};
     memcpy(struct_buffer, in, PT_SAMPLE_HEADER_SIZE);
 
-    strncpy(sample->name, struct_buffer, 22);
+    strncpy(sample->name, (char*)struct_buffer, PT_MAX_SAMPLE_NAME_LENGTH);
     sample->length = struct_buffer[23] + (struct_buffer[22] << 8);
     sample->finetone = struct_buffer[24];
     sample->volume = struct_buffer[25];
@@ -127,7 +127,7 @@ protracker_t* protracker_load(const buffer_t* buffer)
     do
     {
         size_t size = buffer_count(buffer);
-        if (size < sizeof(protracker_header_t))
+        if (size < PT_MAX_SONG_NAME_LENGTH)
         {
             LOG_ERROR("Premature end of data before header.\n");
             break;
@@ -139,13 +139,10 @@ protracker_t* protracker_load(const buffer_t* buffer)
 
         // Module header
 
-        memcpy(&module.header, curr, sizeof(protracker_header_t));
-        curr += sizeof(protracker_header_t);
+        memcpy(&module.header, curr, PT_MAX_SONG_NAME_LENGTH);
+        curr += PT_MAX_SONG_NAME_LENGTH;
 
-        char mod_name[sizeof(module.header.name)+1];
-        memset(mod_name, 0, sizeof(mod_name));
-        memcpy(mod_name, module.header.name, sizeof(module.header.name));
-        LOG_TRACE("Header:\n Name: '%s'\n", mod_name);
+        LOG_TRACE("Header:\n Name: '%.20s'\n", module.header.name);
 
         // Sample headers
 
@@ -170,8 +167,8 @@ protracker_t* protracker_load(const buffer_t* buffer)
 
         // Song
 
-        memcpy(&module.song, curr, sizeof(protracker_song_t));
-        curr += sizeof(protracker_song_t);
+        memcpy(&module.song, curr, PT_SONG_LENGTH);
+        curr += PT_SONG_LENGTH;
 
         LOG_TRACE("Song:\n Positions: %u (%u)\n", module.song.length, module.song.restart_position);
 
@@ -257,7 +254,7 @@ protracker_t* protracker_load(const buffer_t* buffer)
 
         LOG_DEBUG("Protracker module loaded successfully.\n");
 
-        protracker_t* output = malloc(sizeof(protracker_t));
+        protracker_t* output = calloc(1, sizeof(protracker_t));
         if (!output)
         {
             LOG_ERROR("Failed to allocate module block");
@@ -281,7 +278,7 @@ bool protracker_convert(buffer_t* buffer, const protracker_t* module, const char
 
     LOG_TRACE(" - Header\n");
 
-    buffer_add(buffer, &(module->header), sizeof(protracker_header_t));
+    buffer_add(buffer, &(module->header), PT_MAX_SONG_NAME_LENGTH);
 
     LOG_TRACE(" - Samples\n");
 
@@ -298,7 +295,7 @@ bool protracker_convert(buffer_t* buffer, const protracker_t* module, const char
 
     LOG_TRACE(" - Song\n");
 
-    buffer_add(buffer, &(module->song), sizeof(protracker_song_t));
+    buffer_add(buffer, &(module->song), PT_SONG_LENGTH);
     buffer_add(buffer, "M.K.", 4);
 
     LOG_TRACE(" - Patterns (%lu)\n", module->num_patterns);
